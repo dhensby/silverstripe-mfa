@@ -1,0 +1,22 @@
+{
+    "name": "dhensby/silverstripe-mfa",
+    "description": "Multi-factor authentication module for SilverStripe",
+    "type": "silverstripe-module",
+    "require": {
+        "silverstripe/framework": "^3.1.0"
+    },
+    "license": "BSD-3 Clause",
+    "authors": [
+        {
+            "name": "Dan Hensby",
+            "email": "github@hens.by"
+        }
+    ],
+	"extra": {
+		"branch-alias": {
+			"dev-master": "0.1.x-dev"
+		}
+	},
+    "minimum-stability": "dev",
+	"prefer-stable": true
+}
