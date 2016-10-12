@@ -8,6 +8,8 @@ class MFALoginForm extends MemberLoginForm  {
 
 	private static $allowed_actions = array(
 		'doLogin',
+		'challenge',
+		'TFAForm',
 	);
 
 	public function __construct($controller, $name, FieldList $fields = null, FieldList $actions = null, $validator = null) {
@@ -99,13 +101,119 @@ class MFALoginForm extends MemberLoginForm  {
 		}
 		else {
 			if ($member->hasMFA()) {
-				die('got to get your MFA on');
+				Session::set('MFA.MemberID', $member->ID);
+				Session::set('MFA.loginData', $data);
+				$this->getController()->redirect($this->Link('challenge'));
 			}
 			else {
 				$this->performLogin($data);
 				$this->logInUserAndRedirect($data);
 			}
 		}
+	}
+
+	public function Link($action = null) {
+		return Controller::join_links(
+			$this->getController()->Link(),
+			$this->getName(),
+			$action
+		);
+	}
+
+	public function challenge($request) {
+		return $this->customise(array(
+			'Content' => $this->TFAForm(),
+		))->renderWith('Page');
+	}
+
+	public function TFAForm() {
+		return Form::create(
+			$this,
+			'TFAForm',
+			FieldList::create(
+				TextField::create('Token', 'Token')
+			),
+			FieldList::create(
+				FormAction::create('doChallenge', 'Submit')
+			),
+			RequiredFields::create('Token')
+		);
+	}
+
+	/**
+	 * @param array $data
+	 * @param Form $form
+	 * @param SS_HTTPRequest $request
+	 */
+	public function doChallenge($data, $form, $request) {
+		$memberID = Session::get('MFA.MemberID');
+		/** @var Member $member */
+		$member = Member::get()->byID($memberID);
+		$mfaProvider = new MFABackupCodeProvider();
+		$mfaProvider->setMember($member);
+		$data = $form->getData();
+		if ($mfaProvider->verifyToken($data['Token'])) {
+			$loginData = Session::get('MFA.loginData');
+			$member->logIn(isset($loginData['Remember']));
+			$this->logInUserAndRedirect($loginData);
+		}
+		else {
+			die('whoops');
+		}
+
+	}
+
+	protected function logInUserAndRedirect($data) {
+		Session::clear('SessionForms.MemberLoginForm.Email');
+		Session::clear('SessionForms.MemberLoginForm.Remember');
+
+		if(Member::currentUser()->isPasswordExpired()) {
+			if(isset($data['BackURL']) && $backURL = $data['BackURL']) {
+				Session::set('BackURL', $backURL);
+			}
+			$cp = new ChangePasswordForm($this->controller, 'ChangePasswordForm');
+			$cp->sessionMessage(
+				_t('Member.PASSWORDEXPIRED', 'Your password has expired. Please choose a new one.'),
+				'good'
+			);
+			return $this->controller->redirect('Security/changepassword');
+		}
+
+		// Absolute redirection URLs may cause spoofing
+		if(!empty($data['BackURL'])) {
+			$url = $data['BackURL'];
+			if(Director::is_site_url($url) ) {
+				$url = Director::absoluteURL($url);
+			} else {
+				// Spoofing attack, redirect to homepage instead of spoofing url
+				$url = Director::absoluteBaseURL();
+			}
+			return $this->controller->redirect($url);
+		}
+
+		// If a default login dest has been set, redirect to that.
+		if ($url = Security::config()->default_login_dest) {
+			$url = Controller::join_links(Director::absoluteBaseURL(), $url);
+			return $this->controller->redirect($url);
+		}
+
+		// Redirect the user to the page where they came from
+		$member = Member::currentUser();
+		if($member) {
+			$firstname = Convert::raw2xml($member->FirstName);
+			if(!empty($data['Remember'])) {
+				Session::set('SessionForms.MemberLoginForm.Remember', '1');
+				$member->logIn(true);
+			} else {
+				$member->logIn();
+			}
+
+			Session::set('Security.Message.message',
+						 _t('Member.WELCOMEBACK', "Welcome Back, {firstname}", array('firstname' => $firstname))
+			);
+			Session::set("Security.Message.type", "good");
+		}
+		Controller::curr()->redirectBack();
 	}
 
 }

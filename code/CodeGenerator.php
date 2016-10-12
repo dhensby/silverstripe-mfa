@@ -18,7 +18,7 @@ class CodeGenerator {
 
 	const TYPE_NUMERIC = 'numeric';
 
-	const TYPE_ALPHANUMERIC = 'alphanumeric';
+	const TYPE_ALNUM = 'alnum';
 
 	private $case;
 
@@ -72,7 +72,7 @@ class CodeGenerator {
 	}
 
 	public function alphanumeric() {
-		$this->type = self::TYPE_ALPHANUMERIC;
+		$this->type = self::TYPE_ALNUM;
 		return $this;
 	}
 
@@ -105,10 +105,10 @@ class CodeGenerator {
 		$chars = array();
 		$type = $this->getType();
 		$case = $this->getCase();
-		if ($type == self::TYPE_ALPHANUMERIC || $type == self::TYPE_NUMERIC) {
+		if ($type == self::TYPE_ALNUM || $type == self::TYPE_NUMERIC) {
 			$chars[] = self::NUMBERS;
 		}
-		if ($type == self::TYPE_ALPHANUMERIC || $type == self::TYPE_ALPHA) {
+		if ($type == self::TYPE_ALNUM || $type == self::TYPE_ALPHA) {
 			if ($case == self::CASE_MIXED || $case == self::CASE_LOWER) {
 				$chars[] = self::CHARS_LOWER;
 			}

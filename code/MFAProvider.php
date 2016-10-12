@@ -17,6 +17,10 @@ interface MFAProvider {
 	 */
 	public function sendToken();
 
-	public function verifyToken($token);
+	/**
+	 * @param string $backupCode
+	 * @return bool
+	 */
+	public function verifyToken($backupCode);
 
 }
